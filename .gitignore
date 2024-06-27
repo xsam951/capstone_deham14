@@ -4,6 +4,9 @@
 # .tfstate files
 *.tfstate
 *.tfstate.*
+plan.json
+plan.out
+terraform.txt
 
 # Crash log files
 crash.log
