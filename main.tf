@@ -1,10 +1,10 @@
 # specifies the terraform workspace
 terraform {
   cloud {
-    organization = "free-tier-deham14"
+    organization = "sandbox-deham14-sam"
 
     workspaces {
-      name = "Capstone_deham14"
+      name = "Sandbox_deham14"
     }
   }
 }
@@ -21,5 +21,5 @@ terraform {
 
 # aws region to connect to
 provider "aws" {
-  region = "eu-north-1"
+  region = "us-west-2"
 }
