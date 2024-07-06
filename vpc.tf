@@ -36,7 +36,7 @@ resource "aws_route_table" "Public_RouteTable" {
 
   # route to IGW
   route {
-    cidr_block = var.cidr_block
+    cidr_block = var.cidr_block[0]
     gateway_id = aws_internet_gateway.igw.id
   }
   tags = merge(local.tags, {
