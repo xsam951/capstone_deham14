@@ -1,17 +1,9 @@
 # specifies the terraform workspace
 terraform {
-  cloud {
-    organization = "sandbox-deham14-sam"
-
-    workspaces {
-      name = "Sandbox_deham14"
-    }
-  }
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.55.0"
+      version = "~> 5.55"
     }
   }
 }
