@@ -25,7 +25,7 @@ variable "tags" {
 
 # VPC Variables
 variable "cidr_block" {
-  default = "0.0.0.0/0"
+  default = ["0.0.0.0/0"]
 }
 
 variable "availability_zone" {
