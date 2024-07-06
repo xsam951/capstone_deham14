@@ -1,14 +1,26 @@
 # Tag Variables
-variable "tagDate" {
-  default = "2024-07-06"
+# set creation date as a general tag
+locals {
+  creation_date = formatdate("YYYY-MM-DD", timestamp())
+  tags = merge(
+    var.tags,
+    {
+      "CreationDate" = local.creation_date
+    }
+  )
 }
 
 variable "tagName" {
   default = "website"
 }
 
-variable "tagProject" {
-  default = "capstone"
+# combined tags
+variable "tags" {
+  description = "A map of tags to assign to resources."
+  type        = map(string)
+  default     = {
+    "Project" = "capstone"
+  }
 }
 
 # VPC Variables

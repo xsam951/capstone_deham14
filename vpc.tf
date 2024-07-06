@@ -4,11 +4,9 @@ resource "aws_vpc" "website_vpc" {
   enable_dns_hostnames = true 
   enable_dns_support = true
   
-  tags       =  {
-    Name     = "${var.tagName}_vpc"
-    Project  = "${var.tagProject}"
-    CreationDate = "${var.tagDate}"
-  }       
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-VPC"
+  })     
 }
 
 # Create a public subnet
@@ -18,22 +16,18 @@ resource "aws_subnet" "public" {
   availability_zone = var.availability_zone
   map_public_ip_on_launch = true
 
-  tags = {
-    Name = "${var.tagName}_public_subnet"
-    Project  = "${var.tagProject}"
-    CreationDate = "${var.tagDate}"
-  }
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-PublicSubnet"
+  })    
 }
 
 # Create an Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.website_vpc.id
 
-  tags = {
-    Name = "${var.tagName}_igw"
-    Project  = "${var.tagProject}"
-    CreationDate = "${var.tagDate}"
-  }
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-IGW"
+  }) 
 }
 
 # Create a public route table
@@ -45,11 +39,9 @@ resource "aws_route_table" "Public_RouteTable" {
     cidr_block = var.cidr_block
     gateway_id = aws_internet_gateway.igw.id
   }
-  tags = {
-    Name = "${var.tagName}_public_route_table"
-    Project  = "${var.tagProject}"
-    CreationDate = "${var.tagDate}"
-  }
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-PublicRouteTable"
+  }) 
 }
 
 # associate public subnet 1 with public route table
