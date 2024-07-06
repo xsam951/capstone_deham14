@@ -36,3 +36,13 @@ variable "public_subnet_cidr_block" {
   description = "CIDR block for public subnet"
   default     = "10.0.0.0/26"
 }
+
+# EC2 Variables
+variable "ec2_instance_type" {
+  default = "t2.micro"
+}
+
+variable "key_name" {
+  description = "Name of key pair"
+  default     = "vockey"
+}
