@@ -10,7 +10,7 @@ resource "aws_vpc" "website_vpc" {
 }
 
 # Create a public subnet
-resource "aws_subnet" "public" {
+resource "aws_subnet" "public_subnet" {
   vpc_id     = aws_vpc.website_vpc.id
   cidr_block = var.public_subnet_cidr_block
   availability_zone = var.availability_zone
@@ -47,6 +47,6 @@ resource "aws_route_table" "Public_RouteTable" {
 # associate public subnet 1 with public route table
 resource "aws_route_table_association" "Public_Subnet1_Asso" {
   route_table_id = aws_route_table.Public_RouteTable.id
-  subnet_id      = aws_subnet.public.id
-  depends_on     = [aws_route_table.Public_RouteTable, aws_subnet.public]
+  subnet_id      = aws_subnet.public_subnet.id
+  depends_on     = [aws_route_table.Public_RouteTable, aws_subnet.public_subnet]
 }
