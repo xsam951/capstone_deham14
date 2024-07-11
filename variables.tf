@@ -46,3 +46,27 @@ variable "key_name" {
   description = "Name of key pair"
   default     = "vockey"
 }
+
+# UserData Variables
+
+variable "access_key" {
+  default = "<your-access-key>"
+  }
+
+variable "secret_key" {
+  default = "<your-secret-key>"
+  }
+
+variable "session_token" {
+  default = "<your-session-token>"
+  }
+
+variable "region" {
+  default     = "<your-region>"
+}
+
+# S3 Bucket Variables
+
+variable "bucket_name" {
+  default     = "<your-bucket-name>"
+}
