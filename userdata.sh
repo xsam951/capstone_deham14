@@ -1,4 +1,5 @@
-#! /bin/bash -eux
+#! /bin/bash
+
 # # Install updates
 sudo yum update -y
 
@@ -53,11 +54,13 @@ sudo yum update -y
 # Restart Apache
 sudo systemctl restart httpd
 
-# Retrieve RDS endpoint from Terraform output
+# define variables
 DBName="deham14"
 DBUser="admin"
 DBPassword="PassWord%123"
 RDS_ENDPOINT="localhost"
+WPDir="/var/www/html"
+
 
 # Create MySQL user and grant permissions
 mysql -u root -p"$DBRootPassword" -e "CREATE DATABASE IF NOT EXISTS $DBName;"
@@ -65,26 +68,17 @@ mysql -u root -p"$DBRootPassword" -e "CREATE USER IF NOT EXISTS '$DBUser'@'%' ID
 mysql -u root -p"$DBRootPassword" -e "GRANT ALL PRIVILEGES ON $DBName.* TO '$DBUser'@'%';"
 mysql -u root -p"$DBRootPassword" -e "FLUSH PRIVILEGES;"
 
-# Create a temporary file to store the database value
-sudo touch db.txt
-sudo chmod 777 db.txt
-sudo echo "DATABASE $DBName;" >> db.txt
-sudo echo "USER $DBUser;" >> db.txt
-sudo echo "PASSWORD $DBPassword;" >> db.txt
-sudo echo "HOST $RDS_ENDPOINT;" >> db.txt
+# Install WordPress
+sudo wget http://wordpress.org/latest.tar.gz -P $WPDir
 
-
-sudo yum install -y wget
-sudo wget http://wordpress.org/latest.tar.gz -P /var/www/html/
-
-cd /var/www/html
+# Extract WordPress files
+cd $WPDir
 sudo tar -zxvf latest.tar.gz
 sudo cp -rvf wordpress/* .
 
+# Clean up
 sudo rm -R wordpress
 sudo rm latest.tar.gz
-
-echo "Terraform output:"
 
 # Copy wp-config.php file to wordpress directory
 sudo cp ./wp-config-sample.php ./wp-config.php
@@ -102,3 +96,49 @@ sudo yum install -y php-cli php-pdo php-fpm php-json php-mysqlnd
 
 # Restart Apache
 sudo systemctl restart httpd
+
+# Create credentials and config files and set ownershipt and permissions
+sudo mkdir /home/ec2-user/.aws
+sudo touch /home/ec2-user/.aws/credentials /home/ec2-user/.aws/config
+sudo chmod 600 /home/ec2-user/.aws/credentials /home/ec2-user/.aws/config
+sudo chmod 755 /home/ec2-user/.aws
+sudo chown ec2-user:ec2-user /home/ec2-user/.aws -R
+
+# Configure AWS credentials
+sudo echo "[default]" > /home/ec2-user/.aws/credentials
+sudo echo "aws_access_key_id=${access_key}" >> /home/ec2-user/.aws/credentials
+sudo echo "aws_secret_access_key=${secret_key}" >> /home/ec2-user/.aws/credentials
+sudo echo "aws_session_token=${session_token}" >> /home/ec2-user/.aws/credentials
+
+# Configure AWS config
+sudo echo "[default]" > /home/ec2-user/.aws/config
+sudo echo "output = json" >> /home/ec2-user/.aws/config
+sudo echo "region = ${region}" >> /home/ec2-user/.aws/config
+
+# change owner of wordpress directory
+sudo chown -R ec2-user:ec2-user $WPDir
+
+# download wp-files from s3 bucket
+sudo -u ec2-user aws s3 sync s3://${bucket_name}/ $WPDir
+
+# Find the latest mysql backup file
+LatestBackup=$(ls -t $WPDir/*_db_backup.sql | head -n 1)
+
+# Restore the database from the latest backup
+mysql -u root -p"$DBRootPassword" "$DBName" < "$LatestBackup"
+
+# Update the database with the new site URL
+IP_ADDRESS=$(curl -s http://checkip.amazonaws.com)
+mysql -u root -p"$DBRootPassword" $DBName -e "UPDATE wp_options SET option_value = 'http://$IP_ADDRESS' WHERE option_name = 'siteurl' OR option_name = 'home';"
+
+# Restart Apache
+sudo systemctl restart httpd
+
+# create an upload-script
+echo "#!/bin/bash" > /home/ec2-user/upload.sh
+echo "DBRootPassword='$DBRootPassword'" >> /home/ec2-user/upload.sh
+echo "DBName='$DBName'" >> /home/ec2-user/upload.sh
+echo 'sudo mysqldump -u root -p"$DBRootPassword" "$DBName" > /var/www/html/$(date -d "+2 hours" +\%F-\%H\%M)_db_backup.sql' >> /home/ec2-user/upload.sh
+echo 'sudo -u ec2-user aws s3 sync /var/www/html/ s3://'${bucket_name}'/' >> /home/ec2-user/upload.sh
+
+chmod 755 /home/ec2-user/upload.sh
