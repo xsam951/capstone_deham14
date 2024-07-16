@@ -28,13 +28,13 @@ variable "cidr_block" {
   default = ["0.0.0.0/0"]
 }
 
-variable "availability_zone" {
-  default     = "us-west-2a"
+variable "availability_zones" {
+  default     = ["us-west-2a", "us-west-2b"]
 }
 
-variable "public_subnet_cidr_block" {
+variable "public_subnet_cidr_blocks" {
   description = "CIDR block for public subnet"
-  default     = "10.0.0.0/26"
+  default     = ["10.0.0.0/26", "10.0.0.64/26"]
 }
 
 # EC2 Variables
