@@ -10,7 +10,7 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 # Create EC2
-resource "aws_instance" "website-ec2" {
+resource "aws_instance" "website_ec2" {
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = var.ec2_instance_type
   availability_zone = var.availability_zones[0]
