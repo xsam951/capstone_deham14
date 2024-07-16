@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -eux
 
 # # Install updates
 sudo yum update -y
@@ -58,7 +58,7 @@ sudo systemctl restart httpd
 DBName="deham14"
 DBUser="admin"
 DBPassword="PassWord%123"
-RDS_ENDPOINT="localhost"
+DBHost="localhost"
 WPDir="/var/www/html"
 
 
@@ -85,9 +85,9 @@ sudo cp ./wp-config-sample.php ./wp-config.php
 sudo sed -i "s/'database_name_here'/'$DBName'/g" wp-config.php
 sudo sed -i "s/'username_here'/'$DBUser'/g" wp-config.php
 sudo sed -i "s/'password_here'/'$DBPassword'/g" wp-config.php
-sudo sed -i "s/'localhost'/'$RDS_ENDPOINT'/g" wp-config.php
+sudo sed -i "s/'localhost'/'$DBHost'/g" wp-config.php
 
-sudo mysql -h "$RDS_ENDPOINT" -u "$DBUser" -p"$DBPassword" "$DBName" -e "SHOW DATABASES;"
+sudo mysql -h "$DBHost" -u "$DBUser" -p"$DBPassword" "$DBName" -e "SHOW DATABASES;"
 
 #Install PHP Extensions
 #sudo amazon-linux-extras enable php7.4
@@ -118,27 +118,75 @@ sudo echo "region = ${region}" >> /home/ec2-user/.aws/config
 # change owner of wordpress directory
 sudo chown -R ec2-user:ec2-user $WPDir
 
-# download wp-files from s3 bucket
-sudo -u ec2-user aws s3 sync s3://${bucket_name}/ $WPDir
+TempDir="/tmp/backup"
+
+# create temporary directory
+mkdir -p $TempDir
+sudo chown -R ec2-user:ec2-user $TempDir
+
+# get latest backup
+LatestWPBackup=$(sudo -u ec2-user aws s3 ls s3://${bucket_name}/ | grep wp_backup | sort -r | head -n 1 | awk '{print $4}')   
+
+# Download the latest backup file from S3
+sudo -u ec2-user aws s3 cp s3://${bucket_name}/$LatestWPBackup $TempDir/$LatestWPBackup
+
+# Decompress backup file
+cd $TempDir
+rm -rf $WPDir/*
+sudo -u ec2-user tar -xzf $LatestWPBackup -C $WPDir
+
+rm -rf $TempDir/$LatestWPBackup
 
 # Find the latest mysql backup file
-LatestBackup=$(ls -t $WPDir/*_db_backup.sql | head -n 1)
+LatestDBBackup=$(ls -t $WPDir/*_db_backup.sql | head -n 1)
 
 # Restore the database from the latest backup
-mysql -u root -p"$DBRootPassword" "$DBName" < "$LatestBackup"
+mysql -u root -p"$DBRootPassword" "$DBName" < "$LatestDBBackup"
 
 # Update the database with the new site URL
-IP_ADDRESS=$(curl -s http://checkip.amazonaws.com)
-mysql -u root -p"$DBRootPassword" $DBName -e "UPDATE wp_options SET option_value = 'http://$IP_ADDRESS' WHERE option_name = 'siteurl' OR option_name = 'home';"
+# mysql -u root -p"$DBRootPassword" $DBName -e "UPDATE wp_options SET option_value = 'http://$NewIP' WHERE option_name = 'siteurl' OR option_name = 'home';"
+# Fetch the new IP address
+NewIP=$(curl -s http://checkip.amazonaws.com)
+
+# Fetch the old URL from the database
+OldURL=$(mysql -u root -p"$DBRootPassword" $DBName -Ns -e "SELECT CONCAT('http://', SUBSTRING_INDEX(SUBSTRING_INDEX(option_value, '/', 3), '://', -1)) AS OldURL FROM wp_options WHERE option_name = 'siteurl' OR option_name = 'home' LIMIT 1;")
+
+# Update WordPress database URLs
+mysql -u root -p"$DBRootPassword" $DBName <<EOF
+UPDATE wp_options SET option_value = 'http://$NewIP' WHERE option_name = 'siteurl' OR option_name = 'home';
+UPDATE wp_posts SET guid = REPLACE(guid, '$OldURL', 'http://$NewIP/');
+UPDATE wp_posts SET post_content = REPLACE(post_content, '$OldURL', 'http://$NewIP/');
+UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '$OldURL', 'http://$NewIP/');
+UPDATE wp_options SET option_value = REPLACE(option_value, '$OldURL', 'http://$NewIP/') WHERE option_name IN ('home', 'siteurl');
+EOF
+
+sudo rm -rf $LatestDBBackup
+
+# Clean up temporary files
+rm -rf $TempDir
+
+# Create an upload script
+cat <<EOL > /home/ec2-user/upload.sh
+#!/bin/bash
+DBRootPassword='$DBRootPassword'
+DBName='$DBName'
+S3Bucket='${bucket_name}'
+TempDir='/tmp/backup'
+WPDir='$WPDir'
+sudo chown -R ec2-user:ec2-user \$WPDir
+sudo mysqldump -u root -p"\$DBRootPassword" "\$DBName" > \$WPDir/\$(date -d "+2 hours" +\%F-\%H\%M)_db_backup.sql
+BackupFilename="wp_backup_\$(date -d "+2 hours" +\%F-\%H\%M).tar.gz"
+mkdir -p \$TempDir
+tar -czf \$TempDir/\$BackupFilename -C \$WPDir .
+sudo -u ec2-user aws s3 cp \$TempDir/\$BackupFilename s3://\$S3Bucket/
+rm -rf \$TempDir
+sudo chown -R apache:apache \$WPDir
+EOL
+
+sudo chmod 755 /home/ec2-user/upload.sh
+
+# change owner of wordpress directory
+sudo chown -R apache:apache $WPDir
 
 # Restart Apache
 sudo systemctl restart httpd
-
-# create an upload-script
-echo "#!/bin/bash" > /home/ec2-user/upload.sh
-echo "DBRootPassword='$DBRootPassword'" >> /home/ec2-user/upload.sh
-echo "DBName='$DBName'" >> /home/ec2-user/upload.sh
-echo 'sudo mysqldump -u root -p"$DBRootPassword" "$DBName" > /var/www/html/$(date -d "+2 hours" +\%F-\%H\%M)_db_backup.sql' >> /home/ec2-user/upload.sh
-echo 'sudo -u ec2-user aws s3 sync /var/www/html/ s3://'${bucket_name}'/' >> /home/ec2-user/upload.sh
-
-chmod 755 /home/ec2-user/upload.sh
