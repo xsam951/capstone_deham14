@@ -13,11 +13,11 @@ data "aws_ami" "amazon_linux_2" {
 resource "aws_instance" "website-ec2" {
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = var.ec2_instance_type
-  availability_zone = var.availability_zone
+  availability_zone = var.availability_zones[0]
   key_name = var.key_name
   associate_public_ip_address = true
   vpc_security_group_ids = [aws_security_group.website_sg.id]
-  subnet_id = aws_subnet.public_subnet.id
+  subnet_id = aws_subnet.public_subnet[0].id
 
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-EC2"
