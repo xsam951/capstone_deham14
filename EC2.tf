@@ -22,7 +22,6 @@ resource "aws_instance" "website_ec2" {
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-EC2"
   }) 
-  #user_data = file("userdata.sh")
   user_data = templatefile("${path.module}/userdata.sh", {
     access_key    = var.access_key
     secret_key    = var.secret_key

@@ -31,12 +31,6 @@ resource "aws_lb_target_group_attachment" "website_target_group_attachment" {
   port             = 80
 }
 
-# resource "aws_autoscaling_attachment" "name" {
-#   autoscaling_group_name = aws_autoscaling_group.website_autoscaling_group.id
-#   lb_target_group_arn   = aws_lb_target_group.website_target_group.arn
-  
-# }
-
 resource "aws_lb_listener" "website_listener" {
   load_balancer_arn = aws_lb.website_elb.arn
   port              = "80"
