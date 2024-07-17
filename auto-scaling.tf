@@ -1,4 +1,16 @@
 
+# Get latest AMI ID of Amazon Linux 2
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+# Create a launch configuration for autoscaling
 resource "aws_launch_configuration" "scaling_launch_config" {
   image_id        = data.aws_ami.amazon_linux_2.id
   instance_type   = var.ec2_instance_type
@@ -6,6 +18,7 @@ resource "aws_launch_configuration" "scaling_launch_config" {
   key_name        = var.key_name
 }
 
+# Create an autoscaling group using the launch configuration
 resource "aws_autoscaling_group" "website_autoscaling_group" {
   launch_template {
     id      = aws_launch_template.scaling_launch_template.id
@@ -27,7 +40,7 @@ resource "aws_autoscaling_group" "website_autoscaling_group" {
   }
 }
 
-#Create a launch template
+# Create a launch template
 resource "aws_launch_template" "scaling_launch_template" {
   name_prefix            = "scaling_launch_template"
   image_id               = data.aws_ami.amazon_linux_2.id
@@ -58,6 +71,7 @@ resource "aws_launch_template" "scaling_launch_template" {
     }) 
 }
 
+# CPU based autoscaling policy
 resource "aws_autoscaling_policy" "scale_out" {
   name                   = "scale_out"
   adjustment_type        = "ChangeInCapacity"
@@ -72,6 +86,7 @@ resource "aws_autoscaling_policy" "scale_out" {
   }
 } 
 
+# Attach autoscaling Group to elb target group
 resource "aws_autoscaling_attachment" "asg_lb_attachment" {
   autoscaling_group_name = aws_autoscaling_group.website_autoscaling_group.id
   lb_target_group_arn   = aws_lb_target_group.website_target_group.arn
