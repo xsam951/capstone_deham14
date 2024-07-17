@@ -22,11 +22,13 @@ resource "aws_instance" "website_ec2" {
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-EC2"
   }) 
-  user_data = templatefile("${path.module}/userdata.sh", {
+  user_data = base64encode(templatefile("${path.module}/userdata.sh", {
     access_key    = var.access_key
     secret_key    = var.secret_key
     session_token = var.session_token
     region        = var.region
     bucket_name   = var.bucket_name
-  })
+    elb_dns       = aws_lb.website_elb.dns_name
+  }))
+  depends_on = [aws_lb.website_elb]
 }
