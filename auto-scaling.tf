@@ -18,7 +18,7 @@ resource "aws_autoscaling_group" "website_autoscaling_group" {
   vpc_zone_identifier       = [aws_subnet.public_subnet[0].id, aws_subnet.public_subnet[1].id]
   target_group_arns         = [aws_lb_target_group.website_target_group.arn]
   health_check_type         = "ELB"
-  health_check_grace_period = 300
+  health_check_grace_period = 600
 
   tag {
     key                 = "Name"
@@ -68,7 +68,7 @@ resource "aws_autoscaling_policy" "scale_out" {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 75.0
+    target_value = 80.0
   }
 } 
 
