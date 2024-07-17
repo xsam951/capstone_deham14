@@ -146,7 +146,8 @@ mysql -u root -p"$DBRootPassword" "$DBName" < "$LatestDBBackup"
 # Update the database with the new site URL
 # mysql -u root -p"$DBRootPassword" $DBName -e "UPDATE wp_options SET option_value = 'http://$NewIP' WHERE option_name = 'siteurl' OR option_name = 'home';"
 # Fetch the new IP address
-NewIP=$(curl -s http://checkip.amazonaws.com)
+# NewIP=$(curl -s http://checkip.amazonaws.com)
+NewIP="${elb_dns}"
 
 # Fetch the old URL from the database
 OldURL=$(mysql -u root -p"$DBRootPassword" $DBName -Ns -e "SELECT CONCAT('http://', SUBSTRING_INDEX(SUBSTRING_INDEX(option_value, '/', 3), '://', -1)) AS OldURL FROM wp_options WHERE option_name = 'siteurl' OR option_name = 'home' LIMIT 1;")
