@@ -3,13 +3,17 @@ resource "aws_lb" "website_elb" {
   internal           = false
   load_balancer_type = "application"
   subnets            = [aws_subnet.public_subnet[0].id, aws_subnet.public_subnet[1].id]
-  security_groups    = [aws_security_group.website_sg.id]
+  security_groups    = [aws_security_group.elb_sg.id]
 
   enable_deletion_protection = false
 
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-ELB"
   })  
+}
+
+output "elb_dns_name" {
+  value = aws_lb.website_elb.dns_name
 }
 
 resource "aws_lb_target_group" "website_target_group" {
