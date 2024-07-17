@@ -12,13 +12,13 @@ resource "aws_autoscaling_group" "website_autoscaling_group" {
     version = "$Latest"
   }
   name                      = "website-asg"
-  min_size                  = 1
+  min_size                  = 2
   max_size                  = 4
   desired_capacity          = 2
   vpc_zone_identifier       = [aws_subnet.public_subnet[0].id, aws_subnet.public_subnet[1].id]
   target_group_arns         = [aws_lb_target_group.website_target_group.arn]
   health_check_type         = "ELB"
-  health_check_grace_period = 900
+  health_check_grace_period = 300
 
   tag {
     key                 = "Name"
@@ -34,12 +34,14 @@ resource "aws_launch_template" "scaling_launch_template" {
   instance_type          = var.ec2_instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.website_sg.id]
+  depends_on             = [aws_lb.website_elb]
   user_data = base64encode(templatefile("${path.module}/userdata.sh", {
     access_key    = var.access_key
     secret_key    = var.secret_key
     session_token = var.session_token
     region        = var.region
     bucket_name   = var.bucket_name
+    elb_dns       = aws_lb.website_elb.dns_name
   }))
 
   lifecycle {
@@ -66,7 +68,7 @@ resource "aws_autoscaling_policy" "scale_out" {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 60.0
+    target_value = 75.0
   }
 } 
 
