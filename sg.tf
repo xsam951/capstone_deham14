@@ -1,3 +1,4 @@
+# Create security group and rules for webservers
 resource "aws_security_group" "website_sg" {
   name        = "website-sg"
   description = "Security group for Website instance"
@@ -9,8 +10,7 @@ resource "aws_security_group" "website_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = var.cidr_block
-    
+    cidr_blocks = [local.my_public_ip]
   }
 
   ingress {
@@ -35,6 +35,7 @@ resource "aws_security_group" "website_sg" {
   })    
 }
 
+# Create security group and rules for the ELB
 resource "aws_security_group" "elb_sg" {
   name        = "elb-sg"
   description = "Security group for ELB"
