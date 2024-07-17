@@ -1,5 +1,6 @@
+# Create security group and rules for webservers
 resource "aws_security_group" "website_sg" {
-  name        = "website_sg"
+  name        = "website-sg"
   description = "Security group for Website instance"
 
   vpc_id = aws_vpc.website_vpc.id
@@ -9,8 +10,37 @@ resource "aws_security_group" "website_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
+    cidr_blocks = [local.my_public_ip]
+  }
+
+  ingress {
+    description = "HTTP from ELB"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    #cidr_blocks = var.cidr_block
+    security_groups = [aws_security_group.elb_sg.id]
+  }
+
+  egress {
+    description = "All traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = var.cidr_block
   }
+
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-EC2-SG"
+  })    
+}
+
+# Create security group and rules for the ELB
+resource "aws_security_group" "elb_sg" {
+  name        = "elb-sg"
+  description = "Security group for ELB"
+
+  vpc_id = aws_vpc.website_vpc.id
 
   ingress {
     description = "HTTP"
@@ -29,6 +59,6 @@ resource "aws_security_group" "website_sg" {
   }
 
   tags = merge(local.tags, {
-    "Name" = "${var.tagName}-SG"
+    "Name" = "${var.tagName}-ELB-SG"
   })    
 }

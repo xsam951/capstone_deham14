@@ -1,15 +1,4 @@
 # Tag Variables
-# set creation date as a general tag
-locals {
-  creation_date = formatdate("YYYY-MM-DD", timestamp())
-  tags = merge(
-    var.tags,
-    {
-      "CreationDate" = local.creation_date
-    }
-  )
-}
-
 variable "tagName" {
   default = "website"
 }
@@ -23,18 +12,40 @@ variable "tags" {
   }
 }
 
+# set creation date as a general tag
+locals {
+  creation_date = formatdate("YYYY-MM-DD", timestamp())
+  tags = merge(
+    var.tags,
+    {
+      "CreationDate" = local.creation_date
+    }
+  )
+}
+
 # VPC Variables
 variable "cidr_block" {
   default = ["0.0.0.0/0"]
 }
 
-variable "availability_zone" {
-  default     = "us-west-2a"
+variable "availability_zones" {
+  default     = ["us-west-2a", "us-west-2b"]
 }
 
-variable "public_subnet_cidr_block" {
+variable "public_subnet_cidr_blocks" {
   description = "CIDR block for public subnet"
-  default     = "10.0.0.0/26"
+  default     = ["10.0.0.0/26", "10.0.0.64/26"]
+}
+
+# Security Variables
+
+# get local IP address
+data "http" "myip" {
+  url = "https://ipinfo.io/ip"
+}
+
+locals {
+  my_public_ip = "${chomp(data.http.myip.response_body)}/32"
 }
 
 # EC2 Variables
