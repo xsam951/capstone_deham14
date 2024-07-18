@@ -37,6 +37,12 @@ variable "public_subnet_cidr_blocks" {
   default     = ["10.0.0.0/26", "10.0.0.64/26"]
 }
 
+variable "private_subnet_cidr_blocks" {
+  description = "CIDR block for private subnet"
+  default     = ["10.0.0.128/26", "10.0.0.192/26"]
+  
+}
+
 # Security Variables
 
 # get local IP address
