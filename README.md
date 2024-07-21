@@ -14,3 +14,5 @@ The infrastructure so far includes:
 - UserData - a shell script that runs on EC2 startup
   - installing WordPress
   - fetching Website data from external S3
+- 2 RDS - Relational Database Service
+  - one backup RDS in an other Availability Zone
