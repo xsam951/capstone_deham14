@@ -10,7 +10,7 @@ resource "aws_db_subnet_group" "db-subnet-group" {
 }
 
 # Create RDS
-resource "aws_db_instance" "mysql-db" {
+resource "aws_db_instance" "mysql_db" {
   allocated_storage            = 20
   storage_type                 = "gp2"
   engine                       = "mysql"
@@ -21,6 +21,7 @@ resource "aws_db_instance" "mysql-db" {
   password                     = var.rds_password
   port                         = 3306
   snapshot_identifier          = null
+  skip_final_snapshot          = true
   db_subnet_group_name         = aws_db_subnet_group.db-subnet-group.name
   vpc_security_group_ids       = [aws_security_group.rds_sg.id]
   multi_az                     = true
@@ -29,4 +30,9 @@ resource "aws_db_instance" "mysql-db" {
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-RDS"
   })
+}
+
+# output the rds endpoint
+output "rds_endpoint" {
+  value = aws_db_instance.mysql_db.endpoint
 }
