@@ -36,15 +36,6 @@ sudo yum install -y mysql-community-server
 sudo systemctl start mysqld.service
 sudo systemctl enable mysqld.service
 
-# Retrieve the temporary root password
-temp_password=$(sudo grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}')
-
-# Set the desired root password
-DBRootPassword='root@258!Password'
-
-# Change the root password using the temporary password
-mysql -u root -p"$temp_password" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DBRootPassword';"
-
 # Install PHP
 sudo amazon-linux-extras install -y php7.4
 
@@ -55,18 +46,11 @@ sudo yum update -y
 sudo systemctl restart httpd
 
 # define variables
-DBName="deham14"
-DBUser="admin"
-DBPassword="PassWord%123"
-DBHost="localhost"
+DBName=${rds_db_name}
+DBUser=${rds_username}
+DBPassword=${rds_password}
+DBHost=${rds_endpoint}
 WPDir="/var/www/html"
-
-
-# Create MySQL user and grant permissions
-mysql -u root -p"$DBRootPassword" -e "CREATE DATABASE IF NOT EXISTS $DBName;"
-mysql -u root -p"$DBRootPassword" -e "CREATE USER IF NOT EXISTS '$DBUser'@'%' IDENTIFIED BY '$DBPassword';"
-mysql -u root -p"$DBRootPassword" -e "GRANT ALL PRIVILEGES ON $DBName.* TO '$DBUser'@'%';"
-mysql -u root -p"$DBRootPassword" -e "FLUSH PRIVILEGES;"
 
 # Install WordPress
 sudo wget http://wordpress.org/latest.tar.gz -P $WPDir
@@ -79,15 +63,6 @@ sudo cp -rvf wordpress/* .
 # Clean up
 sudo rm -R wordpress
 sudo rm latest.tar.gz
-
-# Copy wp-config.php file to wordpress directory
-sudo cp ./wp-config-sample.php ./wp-config.php
-sudo sed -i "s/'database_name_here'/'$DBName'/g" wp-config.php
-sudo sed -i "s/'username_here'/'$DBUser'/g" wp-config.php
-sudo sed -i "s/'password_here'/'$DBPassword'/g" wp-config.php
-sudo sed -i "s/'localhost'/'$DBHost'/g" wp-config.php
-
-sudo mysql -h "$DBHost" -u "$DBUser" -p"$DBPassword" "$DBName" -e "SHOW DATABASES;"
 
 #Install PHP Extensions
 #sudo amazon-linux-extras enable php7.4
@@ -134,31 +109,34 @@ sudo -u ec2-user aws s3 cp s3://${bucket_name}/$LatestWPBackup $TempDir/$LatestW
 cd $TempDir
 rm -rf $WPDir/*
 sudo -u ec2-user tar -xzf $LatestWPBackup -C $WPDir
-
 rm -rf $TempDir/$LatestWPBackup
+
+
+# update the elb_dns in wp-config
+sudo sed -i "s/define( 'DB_NAME', .*/define( 'DB_NAME', '$DBName' );/" "$WPDir/wp-config.php"
+sed -i "s/define( 'DB_USER', .*/define( 'DB_USER', '$DBUser' );/" "$WPDir/wp-config.php"
+sed -i "s/define( 'DB_PASSWORD', .*/define( 'DB_PASSWORD', '$DBPassword' );/" "$WPDir/wp-config.php"
+sed -i "s/define( 'DB_HOST', .*/define( 'DB_HOST', '$DBHost' );/" "$WPDir/wp-config.php"
 
 # Find the latest mysql backup file
 LatestDBBackup=$(ls -t $WPDir/*_db_backup.sql | head -n 1)
 
 # Restore the database from the latest backup
-mysql -u root -p"$DBRootPassword" "$DBName" < "$LatestDBBackup"
+mysql -h $DBHost -P 3306 -u $DBUser -p"$DBPassword" $DBName < "$LatestDBBackup"
 
 # Update the database with the new site URL
-# mysql -u root -p"$DBRootPassword" $DBName -e "UPDATE wp_options SET option_value = 'http://$NewIP' WHERE option_name = 'siteurl' OR option_name = 'home';"
-# Fetch the new IP address
-# NewIP=$(curl -s http://checkip.amazonaws.com)
 NewIP="${elb_dns}"
 
 # Fetch the old URL from the database
-OldURL=$(mysql -u root -p"$DBRootPassword" $DBName -Ns -e "SELECT CONCAT('http://', SUBSTRING_INDEX(SUBSTRING_INDEX(option_value, '/', 3), '://', -1)) AS OldURL FROM wp_options WHERE option_name = 'siteurl' OR option_name = 'home' LIMIT 1;")
+OldURL=$(mysql -h $DBHost -P 3306 -u $DBUser -p$DBPassword $DBName -N -e "SELECT CONCAT('http://', SUBSTRING_INDEX(SUBSTRING_INDEX(option_value, '/', 3), '://', -1)) AS OldURL FROM wp_options WHERE option_name = 'siteurl' OR option_name = 'home' LIMIT 1;")
 
 # Update WordPress database URLs
-mysql -u root -p"$DBRootPassword" $DBName <<EOF
+mysql -h $DBHost -P 3306 -u $DBUser -p"$DBPassword" $DBName <<EOF
 UPDATE wp_options SET option_value = 'http://$NewIP' WHERE option_name = 'siteurl' OR option_name = 'home';
-UPDATE wp_posts SET guid = REPLACE(guid, '$OldURL', 'http://$NewIP/');
-UPDATE wp_posts SET post_content = REPLACE(post_content, '$OldURL', 'http://$NewIP/');
-UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '$OldURL', 'http://$NewIP/');
-UPDATE wp_options SET option_value = REPLACE(option_value, '$OldURL', 'http://$NewIP/') WHERE option_name IN ('home', 'siteurl');
+UPDATE wp_posts SET guid = REPLACE(guid, '$OldURL', 'http://$NewIP');
+UPDATE wp_posts SET post_content = REPLACE(post_content, '$OldURL', 'http://$NewIP');
+UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '$OldURL', 'http://$NewIP');
+UPDATE wp_options SET option_value = REPLACE(option_value, '$OldURL', 'http://$NewIP') WHERE option_name IN ('home', 'siteurl');
 EOF
 
 sudo rm -rf $LatestDBBackup
@@ -169,13 +147,13 @@ rm -rf $TempDir
 # Create an upload script
 cat <<EOL > /home/ec2-user/upload.sh
 #!/bin/bash
-DBRootPassword='$DBRootPassword'
 DBName='$DBName'
+DBUser='$DBUser'
 S3Bucket='${bucket_name}'
 TempDir='/tmp/backup'
 WPDir='$WPDir'
 sudo chown -R ec2-user:ec2-user \$WPDir
-sudo mysqldump -u root -p"\$DBRootPassword" "\$DBName" > \$WPDir/\$(date -d "+2 hours" +\%F-\%H\%M)_db_backup.sql
+sudo mysqldump -h \$DBHost -P 3306 -u \$DBUser -p"\$DBPassword" "\$DBName" > \$WPDir/\$(date -d "+2 hours" +\%F-\%H\%M)_db_backup.sql
 BackupFilename="wp_backup_\$(date -d "+2 hours" +\%F-\%H\%M).tar.gz"
 mkdir -p \$TempDir
 tar -czf \$TempDir/\$BackupFilename -C \$WPDir .
