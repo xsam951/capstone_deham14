@@ -34,13 +34,12 @@ variable "availability_zones" {
 
 variable "public_subnet_cidr_blocks" {
   description = "CIDR block for public subnet"
-  default     = ["10.0.0.0/26", "10.0.0.64/26"]
+  default     = ["10.0.0.0/28", "10.0.0.16/28"]
 }
 
 variable "private_subnet_cidr_blocks" {
   description = "CIDR block for private subnet"
-  default     = ["10.0.0.128/26", "10.0.0.192/26"]
-  
+  default     = ["10.0.0.32/28", "10.0.0.48/28"]
 }
 
 # Security Variables
