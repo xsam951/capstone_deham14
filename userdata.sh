@@ -149,6 +149,8 @@ cat <<EOL > /home/ec2-user/upload.sh
 #!/bin/bash
 DBName='$DBName'
 DBUser='$DBUser'
+DBPassword='$DBPassword'
+DBHost='$DBHost'
 S3Bucket='${bucket_name}'
 TempDir='/tmp/backup'
 WPDir='$WPDir'
