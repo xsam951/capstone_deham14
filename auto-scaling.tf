@@ -47,14 +47,19 @@ resource "aws_launch_template" "scaling_launch_template" {
   instance_type          = var.ec2_instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.website_sg.id]
-  depends_on             = [aws_lb.website_elb]
+  depends_on             = [aws_lb.website_elb, aws_db_instance.mysql_db]
   user_data = base64encode(templatefile("${path.module}/userdata.sh", {
-    access_key    = var.access_key
-    secret_key    = var.secret_key
-    session_token = var.session_token
-    region        = var.region
-    bucket_name   = var.bucket_name
-    elb_dns       = aws_lb.website_elb.dns_name
+    access_key     = var.access_key
+    secret_key     = var.secret_key
+    session_token  = var.session_token
+    region         = var.region
+    bucket_name    = var.bucket_name
+    elb_dns        = aws_lb.website_elb.dns_name
+    rds_db_name    = var.rds_db_name
+    rds_username   = var.rds_username
+    rds_password   = var.rds_password
+    DBRootPassword = var.DBRootPassword
+    rds_endpoint   = replace(aws_db_instance.mysql_db.endpoint, ":3306", "")
   }))
 
   lifecycle {
@@ -82,7 +87,7 @@ resource "aws_autoscaling_policy" "scale_out" {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 80.0
+    target_value = 60.0
   }
 } 
 

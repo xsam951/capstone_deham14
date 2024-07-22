@@ -34,7 +34,12 @@ variable "availability_zones" {
 
 variable "public_subnet_cidr_blocks" {
   description = "CIDR block for public subnet"
-  default     = ["10.0.0.0/26", "10.0.0.64/26"]
+  default     = ["10.0.0.0/28", "10.0.0.16/28"]
+}
+
+variable "private_subnet_cidr_blocks" {
+  description = "CIDR block for private subnet"
+  default     = ["10.0.0.32/28", "10.0.0.48/28"]
 }
 
 # Security Variables
@@ -80,4 +85,20 @@ variable "region" {
 
 variable "bucket_name" {
   default     = "<your-bucket-name>"
+}
+
+# RDS Variables
+
+variable "rds_username" {
+  description = "The username for the RDS instance"
+  default     = "<your-RDS-username>"
+}
+variable "rds_password" {
+  description = "The password for the RDS instance"
+  sensitive   = true
+  default     = "<your-RDS-password>"
+}
+variable "rds_db_name" {
+  description = "The name of the database"
+  default     = "<your-RDS-db-name>"
 }

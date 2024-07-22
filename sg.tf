@@ -62,3 +62,31 @@ resource "aws_security_group" "elb_sg" {
     "Name" = "${var.tagName}-ELB-SG"
   })    
 }
+
+# Create security group and rules for RDS
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-sg"
+  description = "Security group for RDS"
+
+  vpc_id = aws_vpc.website_vpc.id
+
+  ingress {
+    description = "MySQL"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    security_groups = [aws_security_group.website_sg.id]
+  }
+
+  egress {
+    description = "All traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = var.cidr_block
+  }
+
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-RDS-SG"
+  })    
+}
