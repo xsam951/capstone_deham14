@@ -28,7 +28,7 @@ resource "aws_autoscaling_group" "website_autoscaling_group" {
   min_size                  = 2
   max_size                  = 4
   desired_capacity          = 2
-  vpc_zone_identifier       = [aws_subnet.public_subnet[0].id, aws_subnet.public_subnet[1].id]
+  vpc_zone_identifier       = [aws_subnet.private_subnet[0].id, aws_subnet.private_subnet[1].id]
   target_group_arns         = [aws_lb_target_group.website_target_group.arn]
   health_check_type         = "ELB"
   health_check_grace_period = 600
@@ -82,6 +82,7 @@ resource "aws_autoscaling_policy" "scale_out" {
   adjustment_type        = "ChangeInCapacity"
   policy_type            = "TargetTrackingScaling"
   autoscaling_group_name = aws_autoscaling_group.website_autoscaling_group.name
+  estimated_instance_warmup = 450
 
   target_tracking_configuration {
     predefined_metric_specification {

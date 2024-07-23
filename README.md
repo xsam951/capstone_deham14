@@ -6,11 +6,14 @@ The infrastructure so far includes:
 
 - 1 VPC - Virtual Private Cloud
 - 2 Public Subnets
-- 2 Security Groups
+- 2 Private Subnets
+- 1 NAT Gateway with Elastic IP in Public Subnet 2
+- 3 Security Groups
   - ELB-SG - allowing only http traffic from everywhere
   - webserver-SG - allowing http from ELB-SG only and ssh from local IP only
-- 1 ELB - Elastic Load Balancer
-- 1 Auto-Scaling Group for EC2 instances (min 2, desired 2, max 4)
+  - RDS-SG - allowing mysql from webserver-SG only
+- 1 ELB - Elastic Load Balancer in public subnets
+- 1 Auto-Scaling Group for EC2 instances (min 2, desired 2, max 4) in private subnets
 - UserData - a shell script that runs on EC2 startup
   - installing WordPress
   - fetching Website data from external S3
