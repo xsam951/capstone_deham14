@@ -59,6 +59,7 @@ resource "aws_subnet" "private_subnet" {
   vpc_id     = aws_vpc.website_vpc.id
   cidr_block = var.private_subnet_cidr_blocks[count.index]
   availability_zone = var.availability_zones[count.index]
+  map_public_ip_on_launch = false
 
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-PrivateSubnet-${count.index + 1}"
@@ -68,6 +69,12 @@ resource "aws_subnet" "private_subnet" {
 # Create a private route table
 resource "aws_route_table" "Private_RouteTable" {
   vpc_id = aws_vpc.website_vpc.id
+
+  # route to NAT
+  route {
+    cidr_block = var.cidr_block[0]
+    gateway_id = aws_nat_gateway.nat_gateway.id
+  }
 
   tags = merge(local.tags, {
     "Name" = "${var.tagName}-PrivateRouteTable"
@@ -80,4 +87,23 @@ resource "aws_route_table_association" "Private_Subnet1_Asso" {
   route_table_id = aws_route_table.Private_RouteTable.id
   subnet_id      = aws_subnet.private_subnet[count.index].id
   depends_on     = [aws_route_table.Private_RouteTable, aws_subnet.private_subnet]
+}
+
+# Create Elastic IP for NAT Gateway
+resource "aws_eip" "nat_gateway_eip" {
+  domain = "vpc"
+
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-NATGateway_EIP"
+  }) 
+}
+
+# Create NAT Gateway
+resource "aws_nat_gateway" "nat_gateway" {
+  allocation_id = aws_eip.nat_gateway_eip.id
+  subnet_id     = aws_subnet.public_subnet[1].id
+
+  tags = merge(local.tags, {
+    "Name" = "${var.tagName}-NATGateway"
+  }) 
 }
