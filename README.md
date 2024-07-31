@@ -20,4 +20,4 @@ The infrastructure includes:
 - 2 RDS - Relational Database Service
   - one backup RDS in an other Availability Zone
 
-[To the presentation](https://github.com/xsam951/capstone_deham14/raw/presentation/capstone_presentation_samuel_tadrissi.pdf)
+[To the presentation](https://github.com/xsam951/capstone_deham14/raw/presentation/capstone_presentation.pdf)
