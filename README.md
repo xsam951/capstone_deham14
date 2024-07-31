@@ -2,7 +2,7 @@
 ## My capstone project
 ### using terraform to create a wordpress website in a highly available and scalable environment in AWS
 
-The infrastructure so far includes:
+The infrastructure includes:
 
 - 1 VPC - Virtual Private Cloud
 - 2 Public Subnets
@@ -19,3 +19,5 @@ The infrastructure so far includes:
   - fetching Website data from external S3
 - 2 RDS - Relational Database Service
   - one backup RDS in an other Availability Zone
+
+[To the presentation](https://github.com/xsam951/capstone_deham14/raw/presentation/capstone_presentation_samuel_tadrissi.pdf)
